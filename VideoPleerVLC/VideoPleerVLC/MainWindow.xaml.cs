@@ -6,7 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using Vlc.DotNet.Core;
 using Vlc.DotNet.Core.Interops.Signatures;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace VideoPleerVLC
 {
@@ -40,10 +42,10 @@ namespace VideoPleerVLC
                 pleer.SourceProvider.CreatePlayer(libDirectory/* pass your player parameters here */);
                 pleer.SourceProvider.MediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
                 pleer.SourceProvider.MediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
-                pleer.SourceProvider.MediaPlayer.Paused += (s, e) => StateCheck();
-                pleer.SourceProvider.MediaPlayer.Playing += (s, e) => StateCheck();
-                pleer.SourceProvider.MediaPlayer.Stopped += (s, e) => StateCheck();
-                pleer.SourceProvider.MediaPlayer.Opening += (s, e) => StateCheck();
+                pleer.SourceProvider.MediaPlayer.Paused += StateCheck;
+                pleer.SourceProvider.MediaPlayer.Playing += StateCheck;
+                pleer.SourceProvider.MediaPlayer.Stopped += StateCheck;
+                pleer.SourceProvider.MediaPlayer.Opening += StateCheck;
 
                 if (!string.IsNullOrWhiteSpace(LastFilePlay) && File.Exists(LastFilePlay))
                 {
@@ -64,15 +66,21 @@ namespace VideoPleerVLC
         {
             if (isSliderDragStarted)
                 return;
+
+            isTimeChanged = true;
             StateCheck();
 
             ActionDispatcher(() =>
             {
-                if (isSliderDragStarted)
-                    return;
-                slider.Value = pleer.SourceProvider.MediaPlayer.Time;
-                if (LastTime + 20_000 < pleer.SourceProvider.MediaPlayer.Time)
-                    Properties.Settings.Default.LastTime = LastTime = pleer.SourceProvider.MediaPlayer.Time + 10_000;
+                if (!isSliderDragStarted)
+                {
+                    long time = pleer.SourceProvider.MediaPlayer.Time;
+                    slider.Value = time = pleer.SourceProvider.MediaPlayer.Time;
+                    long deltaTime = time - LastTime;
+                    if (deltaTime < 0 || deltaTime > 20_000)
+                        Properties.Settings.Default.LastTime = LastTime = time + (deltaTime < 0 ? 0 : 10_000);
+                }
+                isTimeChanged = false;
             });
 
         }
@@ -95,6 +103,11 @@ namespace VideoPleerVLC
                     Properties.Settings.Default.LastFilePlay = LastFilePlay = openFileDialog.FileName;
                 });
         }
+
+        private void StateCheck(object sender, VlcMediaPlayerPausedEventArgs e) => StateCheck();
+        private void StateCheck(object sender, VlcMediaPlayerPlayingEventArgs e) => StateCheck();
+        private void StateCheck(object sender, VlcMediaPlayerStoppedEventArgs e) => StateCheck();
+        private void StateCheck(object sender, VlcMediaPlayerOpeningEventArgs e) => StateCheck();
 
         private void StateCheck()
         {
@@ -134,6 +147,7 @@ namespace VideoPleerVLC
 
 
         private bool isSliderDragStarted = false;
+        private bool isTimeChanged;
 
         private void SliderDragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
             => isSliderDragStarted = true;
@@ -145,6 +159,44 @@ namespace VideoPleerVLC
         {
             long time = (long)slider.Value;
             ThreadPool.QueueUserWorkItem(_ => pleer.SourceProvider.MediaPlayer.Time = time);
+        }
+
+        private void slider_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            isSliderDragStarted = false;
+            pleer.SourceProvider.MediaPlayer.SetPause(false);
+        }
+
+        private void slider_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+            => isSliderDragStarted = false;
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            pleer.SourceProvider.MediaPlayer.LengthChanged -= MediaPlayer_LengthChanged;
+            pleer.SourceProvider.MediaPlayer.TimeChanged -= MediaPlayer_TimeChanged;
+            pleer.SourceProvider.MediaPlayer.Paused -= StateCheck;
+            pleer.SourceProvider.MediaPlayer.Playing -= StateCheck;
+            pleer.SourceProvider.MediaPlayer.Stopped -= StateCheck;
+            pleer.SourceProvider.MediaPlayer.Opening -= StateCheck;
+            StateCheck();
+        }
+
+        private void slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (isTimeChanged)
+                return;
+            isSliderDragStarted = true;
+            long time = (long)slider.Value;
+            long deltaTime;
+            while ((deltaTime = Math.Abs(time - pleer.SourceProvider.MediaPlayer.Time)) > 100)
+                Task.Factory.StartNew(() =>
+                {
+                    pleer.SourceProvider.MediaPlayer.Pause();
+                    while (pleer.SourceProvider.MediaPlayer.State != MediaStates.Paused)
+                        Thread.Sleep(100);
+                    pleer.SourceProvider.MediaPlayer.Time = time;
+                    return;
+                }).Wait();
         }
     }
 }

@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:VideoPleerVLC"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800"
-        xmlns:vlc="clr-namespace:Vlc.DotNet.Wpf;assembly=Vlc.DotNet.Wpf">
+        xmlns:vlc="clr-namespace:Vlc.DotNet.Wpf;assembly=Vlc.DotNet.Wpf" Closed="Window_Closed">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition/>
@@ -22,7 +22,10 @@
             </Grid.ColumnDefinitions>
             <TextBlock Text="{Binding Value, ElementName=slider, StringFormat=\{0:F0\}}" Margin="5,0" Width="{Binding ActualWidth, ElementName=textBlock, Mode=OneWay}"/>
             <Slider Grid.Column="1" x:Name="slider" Maximum="0.1"
-                    Thumb.DragStarted="SliderDragStarted"  Thumb.DragCompleted="slider_DragCompleted" Thumb.DragDelta="slider_DragDelta"/>
+                    Thumb.DragStarted="SliderDragStarted"  Thumb.DragCompleted="slider_DragCompleted" Thumb.DragDelta="slider_DragDelta"
+                    IsMoveToPointEnabled="True"
+                    PreviewMouseLeftButtonUp="slider_PreviewMouseLeftButtonUp"
+                    MouseLeave="slider_MouseLeave" ValueChanged="slider_ValueChanged"/>
             <TextBlock x:Name="textBlock" Grid.Column="2" Text="{Binding Maximum, ElementName=slider, StringFormat=\{0:F0\}}" Margin="5,0"/>
         </Grid>
         <Grid Grid.Row="2">

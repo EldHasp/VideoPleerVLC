@@ -16,7 +16,9 @@ namespace VideoPleerVLC
     public partial class App : Application
     {
         public App()
-            => Exit += (s, e) => VideoPleerVLC.Properties.Settings.Default.Save();
-
+        {
+            Exit += (s, e) => VideoPleerVLC.Properties.Settings.Default.Save();
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+        }
     }
 }
