@@ -1,0 +1,39 @@
+﻿<Window x:Class="VideoPleerVLC.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VideoPleerVLC"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800"
+        xmlns:vlc="clr-namespace:Vlc.DotNet.Wpf;assembly=Vlc.DotNet.Wpf">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <vlc:VlcControl x:Name="pleer" />
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding Value, ElementName=slider, StringFormat=\{0:F0\}}" Margin="5,0" Width="{Binding ActualWidth, ElementName=textBlock, Mode=OneWay}"/>
+            <Slider Grid.Column="1" x:Name="slider" Maximum="0.1"
+                    Thumb.DragStarted="SliderDragStarted"  Thumb.DragCompleted="slider_DragCompleted" Thumb.DragDelta="slider_DragDelta"/>
+            <TextBlock x:Name="textBlock" Grid.Column="2" Text="{Binding Maximum, ElementName=slider, StringFormat=\{0:F0\}}" Margin="5,0"/>
+        </Grid>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Button Content="Загрузить" Click="Load_Click"/>
+            <Button x:Name="StartPausePlayButton" Content="Пауза/Продолжить" Grid.Column="1" Click="StartPausePlay_Click"/>
+            <Button Content="Стоп" Grid.Column="2" Click="Stop_Click"/>
+        </Grid>
+    </Grid>
+</Window>
